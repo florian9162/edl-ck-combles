@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>CK COMBLES — État des Lieux</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --bg:#F2F1EE;--surface:#FFFFFF;--blue:#3D7A76;--blue-mid:#5BADA8;--blue-light:#E8F5E4;
+  --accent:#8DC63F;--text:#1A1A1A;--text2:#6B6B6B;--border:#D8D8D4;
+  --green:#2A7A4B;--orange:#C8960A;--red:#C0392B;--radius:12px;
+  --shadow:0 2px 12px rgba(0,0,0,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+.topbar{position:sticky;top:0;z-index:100;background:var(--blue);color:white;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;box-shadow:0 2px 16px rgba(0,0,0,0.2);}
+.topbar-title{font-size:17px;font-weight:700;}
+.topbar-sub{font-size:12px;opacity:0.65;margin-top:2px;font-family:'DM Mono',monospace;}
+.topbar-actions{display:flex;gap:8px;}
+.btn-top{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:white;padding:8px 13px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.btn-top.accent{background:var(--accent);border-color:var(--accent);}
+.progress-wrap{background:rgba(0,0,0,0.2);height:3px;}
+.progress-bar{height:3px;background:#C8E6A0;transition:width 0.4s;}
+
+.sections-nav{display:flex;gap:8px;padding:12px 16px;overflow-x:auto;scrollbar-width:none;background:var(--surface);border-bottom:1px solid var(--border);}
+.sections-nav::-webkit-scrollbar{display:none;}
+.nav-pill{flex-shrink:0;padding:6px 13px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--bg);color:var(--text2);white-space:nowrap;transition:all 0.2s;}
+.nav-pill.active{background:var(--blue);color:white;border-color:var(--blue);}
+
+.main{max-width:900px;margin:0 auto;padding:16px 14px 110px;}
+.section-block{display:none;animation:fadeIn 0.2s ease;}
+.section-block.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+
+.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden;}
+.card-header{background:var(--blue);color:white;padding:13px 16px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;}
+
+.sub-header{background:var(--blue-light);color:var(--blue);padding:10px 16px;font-size:13px;font-weight:700;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
+.sub-header .chev{margin-left:auto;transition:transform 0.2s;font-size:11px;}
+.sub-header.closed .chev{transform:rotate(-90deg);}
+.sub-body{overflow:hidden;transition:max-height 0.3s ease;}
+
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);}
+.field-row.single{grid-template-columns:1fr;}
+.field-row:last-child{border-bottom:none;}
+.field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text2);margin-bottom:5px;}
+.field input,.field textarea{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);outline:none;-webkit-appearance:none;}
+.field input:focus,.field textarea:focus{border-color:var(--blue-mid);background:white;}
+.field textarea{resize:vertical;min-height:70px;}
+
+/* TABLE — hauteur de ligne fixe pour aligner toutes les cellules */
+.check-table{width:100%;border-collapse:collapse;table-layout:fixed;}
+.check-table thead th{background:var(--blue-light);color:var(--blue);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;padding:9px 10px;text-align:left;}
+.check-table thead th.c{text-align:center;}
+.check-table thead th.th-label{width:42%;}
+.check-table thead th.th-val{width:28%;}
+.check-table thead th.th-obs{width:30%;}
+.check-table tbody tr{border-bottom:1px solid var(--border);}
+.check-table tbody tr:last-child{border-bottom:none;}
+.check-table tbody tr:nth-child(even){background:#FAFAF8;}
+/* Hauteur fixe + alignement vertical centré sur toutes les cellules */
+.check-table tbody td{
+  padding:0 10px;
+  height:44px;
+  vertical-align:middle;
+  font-size:14px;
+}
+.check-table tbody td.c{text-align:center;}
+/* Champ obs : même hauteur, aligné au milieu */
+.check-table tbody td.obs{padding:0 8px;}
+.check-table tbody td.obs input{
+  width:100%;
+  height:28px;
+  background:transparent;
+  border:none;
+  border-bottom:1.5px solid var(--border);
+  padding:0 2px;
+  font-size:13px;
+  font-family:'DM Mono',monospace;
+  outline:none;
+  display:block;
+}
+.check-table tbody td.obs input:focus{border-color:var(--blue-mid);}
+
+/* OUI/NON */
+.on-group{display:flex;gap:5px;justify-content:center;align-items:center;}
+.on-btn{width:46px;height:30px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text2);transition:all 0.15s;line-height:1;}
+.on-btn.oui.sel{background:#D4EFDF;border-color:var(--green);color:var(--green);}
+.on-btn.non.sel{background:#FADBD8;border-color:var(--red);color:var(--red);}
+
+/* ÉTAT */
+.et-group{display:flex;gap:4px;justify-content:center;align-items:center;}
+.et-btn{padding:5px 8px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text2);white-space:nowrap;transition:all 0.15s;line-height:1;}
+.et-btn.sel.bon{background:#D4EFDF;border-color:var(--green);color:var(--green);}
+.et-btn.sel.moyen{background:#FEF3CD;border-color:var(--orange);color:#7A5C00;}
+.et-btn.sel.mauvais{background:#FADBD8;border-color:var(--red);color:var(--red);}
+
+/* PIECES */
+.pieces-wrap{padding:12px 14px;}
+.pieces-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.piece-chip{display:flex;align-items:center;gap:7px;padding:9px 11px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;font-weight:500;user-select:none;transition:all 0.15s;}
+.piece-chip.sel{background:var(--blue-light);border-color:var(--blue-mid);color:var(--blue);}
+.piece-chip .ck{width:17px;height:17px;border-radius:4px;border:1.5px solid var(--border);background:white;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;}
+.piece-chip.sel .ck{background:var(--blue);border-color:var(--blue);color:white;}
+
+/* PHOTOS */
+.photos-wrap{padding:12px 14px;}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:10px;}
+.photo-thumb{position:relative;aspect-ratio:4/3;border-radius:8px;overflow:hidden;border:2px solid var(--border);}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.photo-thumb .del{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.6);color:white;border:none;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.photo-thumb .cap{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.55);color:white;border:none;padding:4px 7px;font-size:11px;font-family:'DM Sans',sans-serif;outline:none;}
+.photo-thumb .cap::placeholder{color:rgba(255,255,255,0.6);}
+.add-photo{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:14px;border:2px dashed var(--blue-mid);border-radius:10px;background:var(--blue-light);color:var(--blue-mid);cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;width:100%;}
+.add-photo .ico{font-size:24px;}
+input[type="file"]{display:none;}
+
+/* SIG */
+.sig-wrap{padding:14px 16px;}
+.sig-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text2);margin-bottom:7px;}
+.sig-box{border:2px solid var(--border);border-radius:10px;background:white;overflow:hidden;}
+canvas.sig-cv{display:block;width:100%;touch-action:none;cursor:crosshair;}
+.sig-actions{margin-top:7px;}
+.sig-clear{padding:9px 16px;border-radius:8px;border:1.5px solid var(--red);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;color:var(--red);}
+
+.bot-nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);padding:11px 16px;display:flex;gap:10px;box-shadow:0 -4px 20px rgba(0,0,0,0.08);z-index:100;}
+.nav-btn{flex:1;padding:13px;border-radius:10px;border:none;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;}
+.nav-btn.prev{background:var(--bg);color:var(--text2);border:1.5px solid var(--border);}
+.nav-btn.next{background:var(--blue);color:white;}
+.nav-btn:active{opacity:0.8;transform:scale(0.98);}
+
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px;}
+.modal-ov.open{display:flex;}
+.modal{background:white;border-radius:16px;width:100%;max-width:460px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);}
+.modal-hdr{background:var(--blue);color:white;padding:16px 18px;font-size:16px;font-weight:700;}
+.modal-body{padding:18px;}
+.modal-acts{display:flex;gap:10px;padding:0 18px 18px;}
+.mbtn{flex:1;padding:12px;border-radius:10px;border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.mbtn.cancel{background:var(--bg);color:var(--text2);}
+.mbtn.ok{background:var(--accent);color:white;}
+
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-16px);background:#1A1A1A;color:white;padding:9px 18px;border-radius:20px;font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:all 0.3s;z-index:300;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">CK COMBLES — État des Lieux</div>
+    <div class="topbar-sub" id="sec-ind">1 / 8 — Identification</div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn-top" onclick="openEmail()">✉️ Email</button>
+    <button class="btn-top accent" onclick="exportPDF()">⬇ PDF</button>
+  </div>
+</div>
+<div class="progress-wrap"><div class="progress-bar" id="prog" style="width:12.5%"></div></div>
+
+<div class="sections-nav">
+  <div class="nav-pill active" onclick="goTo(0)">Identification</div>
+  <div class="nav-pill" onclick="goTo(1)">Toiture</div>
+  <div class="nav-pill" onclick="goTo(2)">Charpente</div>
+  <div class="nav-pill" onclick="goTo(3)">Façades</div>
+  <div class="nav-pill" onclick="goTo(4)">Conduit &amp; Cheminée</div>
+  <div class="nav-pill" onclick="goTo(5)">Pièces &amp; Plafonds</div>
+  <div class="nav-pill" onclick="goTo(6)">Cloisonnement</div>
+  <div class="nav-pill" onclick="goTo(7)">Signatures</div>
+</div>
+
+<div class="main">
+
+<!-- 0 -->
+<div class="section-block active" id="sec-0">
+  <div class="card">
+    <div class="card-header">🏗️ Identification du chantier</div>
+    <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #D8D8D4;background:#F4FBF0">
+      <img src="https://florian9162.github.io/edl-ck-combles/LOGO_CK_COMBLES-RVB-300_DPI.jpg" style="height:70px;width:auto;object-fit:contain;border-radius:4px" alt="CK COMBLES" onerror="this.style.display='none'">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:#3D7A76">CK COMBLES</div>
+        <div style="font-size:12px;color:#555;margin-top:2px">28 rue de Domrémy — 45310 Patay</div>
+        <div style="font-size:12px;color:#555">📞 02 59 16 55 56</div>
+        <div style="font-size:12px;color:#555">✉ contact@ck-combles.fr</div>
+        <div style="font-size:12px;color:#888;margin-top:2px">SIRET 933 778 870 000 16 — Garantie Décennale SMA BTP</div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>N° de dossier</label><input type="text" id="f-dos" placeholder="2025-001"></div>
+      <div class="field"><label>Date</label><input type="date" id="f-date"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Nom du client</label><input type="text" id="f-client" placeholder="M. Dupont"></div>
+      <div class="field"><label>Téléphone</label><input type="tel" id="f-tel" placeholder="06 00 00 00 00"></div>
+    </div>
+    <div class="field-row single">
+      <div class="field"><label>Adresse du chantier</label><input type="text" id="f-adr" placeholder="12 rue des Acacias, 75001 Paris"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Type de travaux</label><input type="text" id="f-trav" placeholder="Rénovation toiture"></div>
+      <div class="field"><label>Technicien</label><input type="text" id="f-tech" placeholder="Jean Martin"></div>
+    </div>
+    <div class="field-row single">
+      <div class="field"><label>Entreprise</label><input type="text" id="f-entr" value="CK COMBLES" placeholder="CK COMBLES" style="margin-left:4px"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">📸 Photos générales</div>
+    <div class="photos-wrap">
+      <div class="photo-grid" id="grid-gen"></div>
+      <label class="add-photo" for="file-gen"><span class="ico">📷</span>Prendre / Ajouter des photos</label>
+      <input type="file" id="file-gen" accept="image/*" capture="environment" multiple onchange="addPhotos('gen',this)">
+    </div>
+  </div>
+</div>
+
+<!-- 1: TOITURE -->
+<div class="section-block" id="sec-1">
+  <div class="card">
+    <div class="card-header">🏠 État de la toiture</div>
+    <table class="check-table" id="tbl-toiture">
+      <thead><tr><th class="th-label">Élément</th><th class="th-val c">État / Présence</th><th class="th-obs">Observations</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-header">📸 Photos toiture</div>
+    <div class="photos-wrap">
+      <div class="photo-grid" id="grid-toiture"></div>
+      <label class="add-photo" for="file-toiture"><span class="ico">📷</span>Prendre / Ajouter des photos</label>
+      <input type="file" id="file-toiture" accept="image/*" capture="environment" multiple onchange="addPhotos('toiture',this)">
+    </div>
+  </div>
+</div>
+
+<!-- 2: CHARPENTE -->
+<div class="section-block" id="sec-2">
+  <div class="card">
+    <div class="card-header">🪵 État de la charpente</div>
+    <table class="check-table" id="tbl-charpente">
+      <thead><tr><th class="th-label">Élément</th><th class="th-val c">État / Présence</th><th class="th-obs">Observations</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-header">📸 Photos charpente</div>
+    <div class="photos-wrap">
+      <div class="photo-grid" id="grid-charpente"></div>
+      <label class="add-photo" for="file-charpente"><span class="ico">📷</span>Prendre / Ajouter des photos</label>
+      <input type="file" id="file-charpente" accept="image/*" capture="environment" multiple onchange="addPhotos('charpente',this)">
+    </div>
+  </div>
+</div>
+
+<!-- 3: FAÇADES -->
+<div class="section-block" id="sec-3">
+  <div class="card">
+    <div class="card-header">🏢 État des façades</div>
+    <table class="check-table" id="tbl-facades">
+      <thead><tr><th class="th-label">Façade</th><th class="th-val c">État</th><th class="th-obs">Observations</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div id="facade-photo-sections"></div>
+  </div>
+</div>
+
+<!-- 4: CONDUIT -->
+<div class="section-block" id="sec-4">
+  <div class="card">
+    <div class="card-header">🔥 Conduit de fumée &amp; Souches de cheminée</div>
+    <table class="check-table" id="tbl-conduit">
+      <thead><tr><th class="th-label">Élément</th><th class="th-val c">État / Présence</th><th class="th-obs">Observations</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-header">📸 Photos conduit / cheminée</div>
+    <div class="photos-wrap">
+      <div class="photo-grid" id="grid-conduit"></div>
+      <label class="add-photo" for="file-conduit"><span class="ico">📷</span>Prendre / Ajouter des photos</label>
+      <input type="file" id="file-conduit" accept="image/*" capture="environment" multiple onchange="addPhotos('conduit',this)">
+    </div>
+  </div>
+</div>
+
+<!-- 5: PIÈCES & PLAFONDS -->
+<div class="section-block" id="sec-5">
+  <div class="card">
+    <div class="card-header">🚪 Pièces concernées &amp; État des plafonds</div>
+    <div id="pieces-plafonds"></div>
+  </div>
+</div>
+
+<!-- 6: CLOISONNEMENT -->
+<div class="section-block" id="sec-6">
+  <div class="card">
+    <div class="card-header">🧱 État du cloisonnement</div>
+    <table class="check-table" id="tbl-cloisonnement">
+      <thead><tr><th class="th-label">Élément</th><th class="th-val c">Présence</th><th class="th-obs">Observations</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-header">💬 Observations générales</div>
+    <div class="field-row single">
+      <div class="field"><label>Remarques complémentaires</label><textarea id="f-obs" rows="4" placeholder="Toutes observations supplémentaires…"></textarea></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">📸 Photos cloisonnement</div>
+    <div class="photos-wrap">
+      <div class="photo-grid" id="grid-clois"></div>
+      <label class="add-photo" for="file-clois"><span class="ico">📷</span>Prendre / Ajouter des photos</label>
+      <input type="file" id="file-clois" accept="image/*" capture="environment" multiple onchange="addPhotos('clois',this)">
+    </div>
+  </div>
+</div>
+
+<!-- 7: SIGNATURES -->
+<div class="section-block" id="sec-7">
+  <div class="card">
+    <div class="card-header">✍️ Signature Entreprise</div>
+    <div class="sig-wrap">
+      <div class="sig-label">Signez dans le cadre ci-dessous</div>
+      <div class="sig-box"><canvas class="sig-cv" id="cv-entr" height="160"></canvas></div>
+      <div class="sig-actions"><button class="sig-clear" onclick="clearSig('entr')">✕ Effacer</button></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">✍️ Signature Client</div>
+    <div class="sig-wrap">
+      <div class="sig-label">Le client signe ici</div>
+      <div class="sig-box"><canvas class="sig-cv" id="cv-client" height="160"></canvas></div>
+      <div class="sig-actions"><button class="sig-clear" onclick="clearSig('client')">✕ Effacer</button></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">📋 Mention légale</div>
+    <div class="field-row single">
+      <p style="font-size:13px;color:var(--text2);line-height:1.6;padding:4px 0">
+        Établi en deux exemplaires originaux, en présence du client — un exemplaire lui a été remis.
+      </p>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="bot-nav">
+  <button class="nav-btn prev" id="btn-prev" onclick="prevSec()">← Précédent</button>
+  <button class="nav-btn next" id="btn-next" onclick="nextSec()">Suivant →</button>
+</div>
+
+<div class="modal-ov" id="email-modal">
+  <div class="modal">
+    <div class="modal-hdr">Envoyer par email</div>
+    <div class="modal-body">
+      <div class="field" style="margin-bottom:12px"><label>Email destinataire</label><input type="email" id="email-to" placeholder="client@email.com"></div>
+      <div class="field"><label>Message</label><textarea id="email-msg" rows="3" placeholder="Veuillez trouver ci-joint l'état des lieux…"></textarea></div>
+    </div>
+    <div class="modal-acts">
+      <button class="mbtn cancel" onclick="closeEmail()">Annuler</button>
+      <button class="mbtn ok" onclick="sendEmail()">Envoyer ✉️</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+// t:'e'=Bon/Moyen/Mauvais  t:'o'=Oui/Non
+const TOITURE = [
+  {l:"Faîtage", t:'e'},
+  {l:"Tuiles cassées / manquantes", t:'o'},
+  {l:"Tuiles poreuses", t:'o'},
+  {l:"État des liteaux", t:'e'},
+  {l:"Tuiles chatières", t:'o'},
+  {l:"Tuiles à douilles", t:'o'},
+  {l:"Gerces / nœuds", t:'o'},
+  {l:"Humidité / traces d'infiltration", t:'o'},
+];
+const CHARPENTE = [
+  {l:"Gerces / fissures", t:'o'},
+  {l:"Attaques insectes / xylophages", t:'o'},
+  {l:"Traces d'humidité", t:'o'},
+  {l:"État des assemblages (rampants, pannes)", t:'e'},
+  {l:"Déformation rampant", t:'o'},
+  {l:"Déformation faîtage", t:'o'},
+  {l:"Déformation entrait", t:'o'},
+  {l:"Déformation panne", t:'o'},
+];
+const FACADES = [
+  {l:"Façade principale (rue)", t:'e', key:'facade-rue'},
+  {l:"Façade arrière (jardin)", t:'e', key:'facade-jardin'},
+  {l:"Pignon droit", t:'e', key:'facade-pignond'},
+  {l:"Pignon gauche", t:'e', key:'facade-pignong'},
+];
+const CONDUIT = [
+  {l:"Souches de cheminée", t:'e'},
+  {l:"Conduit de fumée", t:'e'},
+  {l:"Fissures visibles", t:'o'},
+  {l:"Bistres aux joints", t:'o'},
+  {l:"Obturé / bouché", t:'o'},
+];
+const CLOISONNEMENT = [
+  {l:"Fissures", t:'o'},
+  {l:"Humidité / traces", t:'o'},
+  {l:"Chocs / dégradations mécaniques", t:'o'},
+  {l:"Planéité insuffisante", t:'o'},
+];
+const PIECES = ["Séjour","Cuisine","Chambre 1","Chambre 2","Chambre 3","Chambre 4",
+  "Dégagement","Salle de bains 1","Salle de bains 2","WC","Combles","Garage"];
+const PLAFOND = [
+  {l:"Moisissures", t:'o'},
+  {l:"Traces d'humidité", t:'o'},
+  {l:"Fissures", t:'o'},
+  {l:"Têtes de clous / vis apparentes", t:'o'},
+  {l:"Bandes cloquées / fissurées", t:'o'},
+  {l:"Manque laine de verre", t:'o'},
+];
+const SEC_NAMES=["Identification","Toiture","Charpente","Façades","Conduit & Cheminée","Pièces & Plafonds","Cloisonnement","Signatures"];
+
+let curSec=0;
+const photos={};
+const sigPads={};
+const selPieces=new Set();
+
+// ── BUILD ROWS ────────────────────────────────────────────────────────────────
+function makeRow(item, i) {
+  const tr = document.createElement('tr');
+  if(i%2===1) tr.style.background='#FAFAF8';
+  const valCell = item.t==='e'
+    ? `<td class="c"><div class="et-group">
+        <button class="et-btn bon" onclick="setEtat(this)">Bon</button>
+        <button class="et-btn moyen" onclick="setEtat(this)">Moyen</button>
+        <button class="et-btn mauvais" onclick="setEtat(this)">Mauvais</button>
+       </div></td>`
+    : `<td class="c"><div class="on-group">
+        <button class="on-btn oui" onclick="setON(this)">Oui</button>
+        <button class="on-btn non" onclick="setON(this)">Non</button>
+       </div></td>`;
+  tr.innerHTML = `<td>${item.l}</td>${valCell}<td class="obs"><input type="text" placeholder="…"></td>`;
+  return tr;
+}
+
+function fillTable(tableEl, items) {
+  const tbody = tableEl.querySelector('tbody');
+  items.forEach((item,i) => tbody.appendChild(makeRow(item,i)));
+}
+
+function setEtat(btn){btn.closest('.et-group').querySelectorAll('.et-btn').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');}
+function setON(btn){const tr=btn.closest('tr');tr.querySelectorAll('.on-btn').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');}
+
+// ── FAÇADES avec photos par façade ───────────────────────────────────────────
+function buildFacades() {
+  fillTable(document.getElementById('tbl-facades'), FACADES);
+  const cont = document.getElementById('facade-photo-sections');
+  FACADES.forEach(f => {
+    const wrap = document.createElement('div');
+    wrap.style.borderTop = '2px solid var(--blue-light)';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'sub-header';
+    hdr.innerHTML = `<span>📸</span> Photos — ${f.l} <span class="chev">▼</span>`;
+    hdr.onclick = () => {
+      hdr.classList.toggle('closed');
+      bd.style.maxHeight = hdr.classList.contains('closed') ? '0' : bd.scrollHeight+'px';
+    };
+
+    const bd = document.createElement('div');
+    bd.className = 'sub-body';
+    const inner = document.createElement('div');
+    inner.style.padding = '12px 14px';
+
+    const grid = document.createElement('div');
+    grid.className = 'photo-grid';
+    grid.id = 'grid-'+f.key;
+
+    const fid = 'file-'+f.key;
+    const lbl = document.createElement('label');
+    lbl.className = 'add-photo';
+    lbl.htmlFor = fid;
+    lbl.innerHTML = `<span class="ico">📷</span>Prendre / Ajouter des photos — ${f.l}`;
+
+    const inp = document.createElement('input');
+    inp.type='file'; inp.id=fid; inp.accept='image/*';
+    inp.setAttribute('capture','environment'); inp.multiple=true;
+    inp.onchange=function(){addPhotos(f.key,this);};
+
+    inner.appendChild(grid); inner.appendChild(lbl); inner.appendChild(inp);
+    bd.appendChild(inner);
+    bd.style.maxHeight = '9999px';
+    wrap.appendChild(hdr); wrap.appendChild(bd);
+    cont.appendChild(wrap);
+  });
+}
+
+// ── PIÈCES + PLAFONDS ────────────────────────────────────────────────────────
+function buildPiecesPlafonds() {
+  const wrap = document.getElementById('pieces-plafonds');
+
+  const top = document.createElement('div');
+  top.style.padding = '12px 14px 8px';
+  top.innerHTML = '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text2);margin-bottom:9px">Sélectionnez les pièces concernées</div>';
+  const grid = document.createElement('div');
+  grid.className = 'pieces-grid';
+  PIECES.forEach(p => {
+    const chip = document.createElement('div');
+    chip.className = 'piece-chip';
+    chip.innerHTML = `<div class="ck"></div><span>${p}</span>`;
+    chip.onclick = () => {
+      const on = chip.classList.toggle('sel');
+      chip.querySelector('.ck').textContent = on ? '✓' : '';
+      on ? selPieces.add(p) : selPieces.delete(p);
+      on ? showPiece(p) : hidePiece(p);
+      updateEmpty();
+    };
+    grid.appendChild(chip);
+  });
+  top.appendChild(grid);
+  wrap.appendChild(top);
+
+  const sep = document.createElement('div');
+  sep.style.cssText = 'border-top:2px solid var(--blue-light)';
+  wrap.appendChild(sep);
+
+  const empty = document.createElement('div');
+  empty.id = 'p-empty';
+  empty.style.cssText = 'padding:18px;text-align:center;color:var(--text2);font-style:italic;font-size:14px';
+  empty.textContent = "Sélectionnez des pièces ci-dessus pour saisir l'état des plafonds";
+  wrap.appendChild(empty);
+
+  PIECES.forEach(p => {
+    const sec = document.createElement('div');
+    sec.id = 'psec-'+p.replace(/\s/g,'_');
+    sec.style.cssText = 'display:none;border-top:1px solid var(--border)';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'sub-header';
+    hdr.innerHTML = `<span>🚪</span> ${p} <span class="chev">▼</span>`;
+
+    const bd = document.createElement('div');
+    bd.className = 'sub-body';
+
+    hdr.onclick = () => {
+      hdr.classList.toggle('closed');
+      bd.style.maxHeight = hdr.classList.contains('closed') ? '0' : '9999px';
+    };
+
+    // Table plafond
+    const tbl = document.createElement('table');
+    tbl.className = 'check-table';
+    tbl.innerHTML = `<thead><tr><th class="th-label">Critère plafond</th><th class="th-val c">Présence</th><th class="th-obs">Observations</th></tr></thead>`;
+    const tbody = document.createElement('tbody');
+    PLAFOND.forEach((item,i) => tbody.appendChild(makeRow(item,i)));
+    tbl.appendChild(tbody);
+    bd.appendChild(tbl);
+
+    // Photo par pièce
+    const photoWrap = document.createElement('div');
+    photoWrap.style.padding = '10px 14px 12px';
+    const photoGrid = document.createElement('div');
+    photoGrid.className = 'photo-grid';
+    photoGrid.id = 'grid-piece-'+p.replace(/\s/g,'_');
+    const fid = 'file-piece-'+p.replace(/\s/g,'_');
+    const lbl = document.createElement('label');
+    lbl.className = 'add-photo'; lbl.htmlFor = fid;
+    lbl.innerHTML = `<span class="ico">📷</span>Prendre / Ajouter des photos — plafond ${p}`;
+    const inp = document.createElement('input');
+    inp.type='file'; inp.id=fid; inp.accept='image/*';
+    inp.setAttribute('capture','environment'); inp.multiple=true;
+    inp.onchange=function(){addPhotos('piece-'+p.replace(/\s/g,'_'),this);};
+    photoWrap.appendChild(photoGrid); photoWrap.appendChild(lbl); photoWrap.appendChild(inp);
+    bd.appendChild(photoWrap);
+
+    bd.style.maxHeight = '9999px';
+    sec.appendChild(hdr); sec.appendChild(bd);
+    wrap.appendChild(sec);
+  });
+}
+
+function showPiece(p){const el=document.getElementById('psec-'+p.replace(/\s/g,'_'));if(el)el.style.display='block';}
+function hidePiece(p){const el=document.getElementById('psec-'+p.replace(/\s/g,'_'));if(el)el.style.display='none';}
+function updateEmpty(){const el=document.getElementById('p-empty');if(el)el.style.display=selPieces.size===0?'block':'none';}
+
+// ── PHOTOS ────────────────────────────────────────────────────────────────────
+function addPhotos(key,input){
+  if(!photos[key])photos[key]=[];
+  Array.from(input.files).forEach(f=>{
+    const r=new FileReader();
+    r.onload=e=>{photos[key].push({dataUrl:e.target.result,caption:''});renderPhotos(key);};
+    r.readAsDataURL(f);
+  });
+  input.value='';
+}
+function renderPhotos(key){
+  const grid=document.getElementById('grid-'+key);
+  if(!grid)return;
+  grid.innerHTML='';
+  (photos[key]||[]).forEach((p,i)=>{
+    const d=document.createElement('div');
+    d.className='photo-thumb';
+    d.innerHTML=`<img src="${p.dataUrl}">
+      <button class="del" onclick="delPhoto('${key}',${i})">✕</button>
+      <input class="cap" type="text" placeholder="Légende…" value="${p.caption}"
+        oninput="photos['${key}'][${i}].caption=this.value">`;
+    grid.appendChild(d);
+  });
+}
+function delPhoto(key,i){photos[key].splice(i,1);renderPhotos(key);}
+
+// ── SIGNATURES ────────────────────────────────────────────────────────────────
+function initSig(id){
+  const cv=document.getElementById('cv-'+id);
+  if(!cv||sigPads[id])return;
+  cv.width=cv.offsetWidth||600;
+  const ctx=cv.getContext('2d');
+  ctx.strokeStyle='#1B3A6B';ctx.lineWidth=2.5;ctx.lineCap='round';
+  let dr=false,lx=0,ly=0;
+  function pos(e){const r=cv.getBoundingClientRect(),sx=cv.width/r.width,sy=cv.height/r.height,s=e.touches?e.touches[0]:e;return[(s.clientX-r.left)*sx,(s.clientY-r.top)*sy];}
+  cv.addEventListener('mousedown',e=>{dr=true;[lx,ly]=pos(e);});
+  cv.addEventListener('mousemove',e=>{if(!dr)return;const[x,y]=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(x,y);ctx.stroke();[lx,ly]=[x,y];});
+  cv.addEventListener('mouseup',()=>dr=false);
+  cv.addEventListener('touchstart',e=>{e.preventDefault();dr=true;[lx,ly]=pos(e);},{passive:false});
+  cv.addEventListener('touchmove',e=>{e.preventDefault();if(!dr)return;const[x,y]=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(x,y);ctx.stroke();[lx,ly]=[x,y];},{passive:false});
+  cv.addEventListener('touchend',()=>dr=false);
+  sigPads[id]=cv;
+}
+function clearSig(id){const c=sigPads[id];if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function goTo(n){
+  document.getElementById('sec-'+curSec).classList.remove('active');
+  document.querySelectorAll('.nav-pill')[curSec].classList.remove('active');
+  curSec=n;
+  document.getElementById('sec-'+n).classList.add('active');
+  const pills=document.querySelectorAll('.nav-pill');
+  pills[n].classList.add('active');
+  pills[n].scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+  document.getElementById('sec-ind').textContent=`${n+1} / ${SEC_NAMES.length} — ${SEC_NAMES[n]}`;
+  document.getElementById('prog').style.width=`${((n+1)/SEC_NAMES.length)*100}%`;
+  document.getElementById('btn-prev').style.display=n===0?'none':'';
+  document.getElementById('btn-next').textContent=n===SEC_NAMES.length-1?'✓ Terminer':'Suivant →';
+  if(n===7)setTimeout(()=>{initSig('entr');initSig('client');},100);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function nextSec(){if(curSec<SEC_NAMES.length-1)goTo(curSec+1);else showToast('✅ Document complet — PDF ou Email');}
+function prevSec(){if(curSec>0)goTo(curSec-1);}
+
+// ── PDF ───────────────────────────────────────────────────────────────────────
+async function exportPDF(){
+  showToast('⏳ Génération du PDF…');
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const pw=210,ph=297,mg=14;let y=mg;
+  const cw=pw-mg*2;
+  const B=[61,122,118],BL=[232,245,228],GR=[248,248,248],W=[255,255,255];
+  const GRN=[42,122,75],ORN=[180,130,0],RED=[192,57,43];
+  const BGREEN=[141,198,63];
+  function chk(n=14){if(y+n>ph-mg){doc.addPage();y=mg;}}
+  function secT(t){chk(11);doc.setFillColor(...B);doc.rect(mg,y,pw-mg*2,8,'F');doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text(t,mg+3,y+5.5);y+=10;}
+  function eCol(t){if(t==='Bon')return GRN;if(t==='Moyen')return ORN;if(t==='Mauvais')return RED;return[120,120,120];}
+
+  const ds=document.getElementById('f-date').value||new Date().toLocaleDateString('fr-FR');
+
+  // EN-TETE CK COMBLES
+  doc.setFillColor(255,255,255);doc.rect(mg,y,cw,30,'F');
+  // Logo depuis GitHub
+  try {
+    const logoImg = document.querySelector('img[alt="CK COMBLES"]');
+    if(logoImg && logoImg.complete) {
+      doc.addImage(logoImg, 'JPEG', mg, y+1, 26, 28);
+    } else {
+      doc.setFillColor(...B);doc.rect(mg,y,26,30,'F');
+      doc.setFillColor(...BGREEN);doc.rect(mg,y,4,30,'F');
+      doc.setTextColor(...BGREEN);doc.setFont('helvetica','bold');doc.setFontSize(7);
+      doc.text('CK',mg+15,y+9,{align:'center'});
+      doc.text('COM',mg+15,y+16,{align:'center'});
+      doc.text('BLES',mg+15,y+23,{align:'center'});
+    }
+  } catch(e) {
+    doc.setFillColor(...B);doc.rect(mg,y,26,30,'F');
+  }
+  // Infos
+  doc.setTextColor(...B);doc.setFont('helvetica','bold');doc.setFontSize(13);
+  doc.text('CK COMBLES',mg+30,y+10);
+  doc.setTextColor(80,80,80);doc.setFont('helvetica','normal');doc.setFontSize(7.5);
+  doc.text('28 rue de Domremy — 45310 Patay',mg+30,y+16);
+  doc.text('Tel : 02 59 16 55 56   |   contact@ck-combles.fr',mg+30,y+21);
+  doc.text('SIRET 933 778 870 000 16 — Garantie Decennale SMA BTP',mg+30,y+26);
+  // Titre
+  doc.setFillColor(...B);doc.rect(mg+cw-55,y+2,53,26,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(9);
+  doc.text('ETAT DES LIEUX',mg+cw-28,y+11,{align:'center'});
+  doc.setFontSize(7);doc.setFont('helvetica','normal');
+  doc.text('AVANT TRAVAUX',mg+cw-28,y+17,{align:'center'});
+  doc.text('N '+String.fromCharCode(176)+' '+(document.getElementById('f-dos').value||'-')+'  |  '+ds,mg+cw-28,y+23,{align:'center'});
+  // Ligne verte
+  doc.setFillColor(...BGREEN);doc.rect(mg,y+30,cw,1.5,'F');
+  y+=34;
+
+  secT('1.  IDENTIFICATION DU CHANTIER');
+  const inf=[['Client :',document.getElementById('f-client').value],['Tél :',document.getElementById('f-tel').value],
+    ['Adresse :',document.getElementById('f-adr').value],['Travaux :',document.getElementById('f-trav').value],
+    ['Technicien :',document.getElementById('f-tech').value],['Entreprise :',document.getElementById('f-entr').value]];
+  
+  for(let i=0;i<inf.length;i+=2){
+    chk(7);doc.setFillColor(...GR);doc.rect(mg,y,cw,7,'F');
+    doc.setTextColor(80,80,80);doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text(inf[i][0],mg+2,y+4.5);
+    doc.setFont('helvetica','normal');doc.setTextColor(20,20,20);doc.text(inf[i][1]||'—',mg+2+doc.getTextWidth(inf[i][0])+1,y+4.5);
+    if(inf[i+1]){const cx=mg+cw/2;doc.setTextColor(80,80,80);doc.setFont('helvetica','bold');doc.text(inf[i+1][0],cx+2,y+4.5);doc.setFont('helvetica','normal');doc.setTextColor(20,20,20);doc.text(inf[i+1][1]||'—',cx+2+doc.getTextWidth(inf[i+1][0])+1,y+4.5);}
+    y+=7;
+  }y+=4;
+
+  function drawTable(title, items, tableId){
+    secT(title);
+    doc.setFillColor(...BL);doc.rect(mg,y,cw,7,'F');
+    doc.setTextColor(...B);doc.setFont('helvetica','bold');doc.setFontSize(8);
+    doc.text('Élément',mg+2,y+5);doc.text('Valeur',mg+cw-52,y+5,{align:'center'});doc.text('Observations',mg+cw-32,y+5);
+    y+=7;
+    const rows=document.getElementById(tableId)?.querySelectorAll('tbody tr')||[];
+    rows.forEach((tr,i)=>{
+      chk(7);doc.setFillColor(...(i%2===0?W:GR));doc.rect(mg,y,cw,6.5,'F');
+      doc.setDrawColor(210,210,210);doc.rect(mg,y,cw,6.5,'S');
+      doc.setTextColor(30,30,30);doc.setFont('helvetica','normal');doc.setFontSize(8);
+      doc.text(items[i]?.l||'',mg+2,y+4.5);
+      const obs=(tr.querySelector('.obs input')?.value||'').substring(0,28);
+      if(items[i]?.t==='e'){
+        const sel=tr.querySelector('.et-btn.sel'),et=sel?sel.textContent:'—';
+        doc.setTextColor(...eCol(et));doc.setFont('helvetica','bold');
+        doc.text(et,mg+cw-52,y+4.5,{align:'center'});
+      }else{
+        const os=tr.querySelector('.on-btn.oui')?.classList.contains('sel');
+        const ns=tr.querySelector('.on-btn.non')?.classList.contains('sel');
+        const cx=mg+cw-52;
+        if(os){doc.setFillColor(...GRN);doc.circle(cx-6,y+3.2,2.5,'F');doc.setTextColor(...W);doc.setFontSize(7);doc.text('O',cx-6,y+4.5,{align:'center'});}
+        else{doc.setDrawColor(180,180,180);doc.circle(cx-6,y+3.2,2.5,'S');}
+        if(ns){doc.setFillColor(...RED);doc.circle(cx+6,y+3.2,2.5,'F');doc.setTextColor(...W);doc.setFontSize(7);doc.text('N',cx+6,y+4.5,{align:'center'});}
+        else{doc.setDrawColor(180,180,180);doc.circle(cx+6,y+3.2,2.5,'S');}
+      }
+      doc.setTextColor(60,60,60);doc.setFont('helvetica','italic');doc.setFontSize(7.5);
+      doc.text(obs,mg+cw-30,y+4.5);
+      y+=6.5;
+    });y+=4;
+  }
+
+  drawTable('2.  ÉTAT DE LA TOITURE', TOITURE, 'tbl-toiture');
+  drawTable('3.  ÉTAT DE LA CHARPENTE', CHARPENTE, 'tbl-charpente');
+  drawTable('4.  ÉTAT DES FAÇADES', FACADES, 'tbl-facades');
+  drawTable('5.  CONDUIT DE FUMÉE & SOUCHES DE CHEMINÉE', CONDUIT, 'tbl-conduit');
+
+  // PIÈCES & PLAFONDS
+  secT('6.  PIÈCES CONCERNÉES & ÉTAT DES PLAFONDS');
+  const pArr=Array.from(selPieces);
+  if(!pArr.length){
+    chk(8);doc.setFillColor(...GR);doc.rect(mg,y,cw,7,'F');
+    doc.setTextColor(120,120,120);doc.setFont('helvetica','italic');doc.setFontSize(8);
+    doc.text('Aucune pièce sélectionnée',mg+3,y+5.5);y+=9;
+  }else{
+    chk(8);doc.setFillColor(...GR);doc.rect(mg,y,cw,7,'F');
+    doc.setTextColor(30,30,30);doc.setFont('helvetica','normal');doc.setFontSize(8);
+    doc.text(pArr.join('  ·  '),mg+3,y+5.5);y+=9;
+    pArr.forEach(p=>{
+      chk(12);doc.setFillColor(...BL);doc.rect(mg,y,cw,7,'F');
+      doc.setTextColor(...B);doc.setFont('helvetica','bold');doc.setFontSize(9);
+      doc.text('Plafond — '+p,mg+3,y+5);y+=7;
+      const rows=document.getElementById('psec-'+p.replace(/\s/g,'_'))?.querySelectorAll('tbody tr')||[];
+      rows.forEach((tr,i)=>{
+        chk(7);doc.setFillColor(...(i%2===0?W:GR));doc.rect(mg,y,cw,6.5,'F');
+        doc.setDrawColor(210,210,210);doc.rect(mg,y,cw,6.5,'S');
+        doc.setTextColor(30,30,30);doc.setFont('helvetica','normal');doc.setFontSize(8);
+        doc.text(PLAFOND[i]?.l||'',mg+2,y+4.5);
+        const os=tr.querySelector('.on-btn.oui')?.classList.contains('sel');
+        const ns=tr.querySelector('.on-btn.non')?.classList.contains('sel');
+        const cx=mg+cw-52;
+        if(os){doc.setFillColor(...GRN);doc.circle(cx-6,y+3.2,2.5,'F');doc.setTextColor(...W);doc.setFontSize(7);doc.text('O',cx-6,y+4.5,{align:'center'});}
+        else{doc.setDrawColor(180,180,180);doc.circle(cx-6,y+3.2,2.5,'S');}
+        if(ns){doc.setFillColor(...RED);doc.circle(cx+6,y+3.2,2.5,'F');doc.setTextColor(...W);doc.setFontSize(7);doc.text('N',cx+6,y+4.5,{align:'center'});}
+        else{doc.setDrawColor(180,180,180);doc.circle(cx+6,y+3.2,2.5,'S');}
+        doc.setTextColor(60,60,60);doc.setFont('helvetica','italic');doc.setFontSize(7.5);
+        doc.text((tr.querySelector('.obs input')?.value||'').substring(0,28),mg+cw-30,y+4.5);
+        y+=6.5;
+      });y+=3;
+    });
+  }y+=4;
+
+  drawTable('7.  ÉTAT DU CLOISONNEMENT', CLOISONNEMENT, 'tbl-cloisonnement');
+
+  const obs=document.getElementById('f-obs').value;
+  if(obs){secT('OBSERVATIONS');chk(14);doc.setFillColor(...GR);doc.rect(mg,y,cw,12,'F');doc.setTextColor(30,30,30);doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.text(doc.splitTextToSize(obs,cw-6),mg+3,y+5);y+=14;}
+
+  async function pdfPh(key,label){
+    if(!photos[key]?.length)return;
+    secT(label);
+    for(let i=0;i<photos[key].length;i++){
+      const iw=(cw-6)/2,ih=44,xp=mg+(i%2)*(iw+6);
+      if(i%2===0)chk(48);
+      try{
+        doc.addImage(photos[key][i].dataUrl,'JPEG',xp,y,iw,ih,'','MEDIUM');
+        if(photos[key][i].caption){doc.setTextColor(...W);doc.setFont('helvetica','italic');doc.setFontSize(7);doc.text(photos[key][i].caption,xp+2,y+ih-2);}
+        if(i%2===1||i===photos[key].length-1)y+=46;
+      }catch(e){}
+    }y+=3;
+  }
+
+  await pdfPh('gen','PHOTOS GÉNÉRALES');
+  await pdfPh('toiture','PHOTOS — TOITURE');
+  await pdfPh('charpente','PHOTOS — CHARPENTE');
+  for(const f of FACADES)await pdfPh(f.key,'PHOTOS — '+f.l.toUpperCase());
+  await pdfPh('conduit','PHOTOS — CONDUIT / CHEMINÉE');
+  for(const p of Array.from(selPieces))await pdfPh('piece-'+p.replace(/\s/g,'_'),'PHOTOS PLAFOND — '+p.toUpperCase());
+  await pdfPh('clois','PHOTOS — CLOISONNEMENT');
+
+  chk(55);secT('8.  SIGNATURES');y+=4;
+  const sw=(cw-8)/2,sh=34;
+  ['entr','client'].forEach((id,i)=>{
+    const xp=mg+i*(sw+8);
+    doc.setFillColor(...BL);doc.rect(xp,y,sw,sh,'F');doc.setDrawColor(...B);doc.rect(xp,y,sw,sh,'S');
+    doc.setTextColor(...B);doc.setFont('helvetica','bold');doc.setFontSize(8);
+    doc.text(id==='entr'?'Signature Entreprise':'Signature Client',xp+3,y+6);
+    const c=sigPads[id];if(c){try{doc.addImage(c.toDataURL('image/png'),'PNG',xp+4,y+9,sw-8,sh-13,'','FAST');}catch(e){}}
+  });
+  y+=sh+7;
+  doc.setTextColor(140,140,140);doc.setFont('helvetica','italic');doc.setFontSize(8);
+  doc.text('Établi en deux exemplaires originaux, en présence du client — un exemplaire lui a été remis.',pw/2,y+4,{align:'center'});
+
+  // PIED DE PAGE
+  const nbPages=doc.internal.getNumberOfPages();
+  for(let pg=1;pg<=nbPages;pg++){
+    doc.setPage(pg);
+    doc.setFillColor(248,248,248);doc.rect(mg,ph-10,cw,8,'F');
+    doc.setDrawColor(...BGREEN);doc.setLineWidth(0.8);doc.line(mg,ph-10,mg+cw,ph-10);
+    doc.setTextColor(...B);doc.setFont('helvetica','bold');doc.setFontSize(6);
+    doc.text('CK COMBLES',mg+2,ph-5);
+    doc.setTextColor(120,120,120);doc.setFont('helvetica','normal');doc.setFontSize(6);
+    doc.text('28 rue de Domremy, 45310 Patay  |  02 59 16 55 56  |  contact@ck-combles.fr  |  SIRET 933 778 870 000 16',mg+28,ph-5);
+    doc.setTextColor(...B);doc.setFont('helvetica','bold');doc.setFontSize(6);
+    doc.text('Page '+pg+'/'+nbPages,mg+cw,ph-5,{align:'right'});
+  }
+  doc.save(`EdL_${(document.getElementById('f-dos').value||'chantier').replace(/\s/g,'_')}_${ds.replace(/\//g,'-')}.pdf`);
+  showToast('✅ PDF téléchargé !');
+}
+
+function openEmail(){document.getElementById('email-modal').classList.add('open');}
+function closeEmail(){document.getElementById('email-modal').classList.remove('open');}
+function sendEmail(){
+  const to=document.getElementById('email-to').value;
+  const msg=document.getElementById('email-msg').value||"Veuillez trouver ci-joint l'état des lieux.";
+  const s=encodeURIComponent(`État des lieux${document.getElementById('f-dos').value?' N°'+document.getElementById('f-dos').value:''}${document.getElementById('f-client').value?' — '+document.getElementById('f-client').value:''}`);
+  const b=encodeURIComponent(msg+'\n\nCordialement,\n'+document.getElementById('f-tech').value+'\n'+document.getElementById('f-entr').value);
+  window.location.href=`mailto:${to}?subject=${s}&body=${b}`;
+  closeEmail();showToast('📧 Application Mail ouverte');
+}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  fillTable(document.getElementById('tbl-toiture'), TOITURE);
+  fillTable(document.getElementById('tbl-charpente'), CHARPENTE);
+  buildFacades();
+  fillTable(document.getElementById('tbl-conduit'), CONDUIT);
+  buildPiecesPlafonds();
+  fillTable(document.getElementById('tbl-cloisonnement'), CLOISONNEMENT);
+  document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('btn-prev').style.display='none';
+});
+</script>
+</body>
+</html>
